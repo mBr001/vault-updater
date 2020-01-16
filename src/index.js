@@ -16,7 +16,6 @@ let logger = require('logfmt')
 let Inert = require('inert')
 let assert = require('assert')
 let _ = require('underscore')
-let h2o2 = require('h2o2')
 
 let profile = process.env.NODE_ENV || 'development'
 let config = require('../config/config.' + profile + '.js')
@@ -70,62 +69,74 @@ mq.setup((senders) => {
     // webcompat collection routes
     let webcompatRoutes = require('./controllers/webcompat').setup(runtime, releases)
 
-    let server = null
+    const init = async () => {
+      let server = null
 
-    // Output request headers to aid in osx crash storage issue
-    if (process.env.LOG_HEADERS) {
-      server = new Hapi.Server({
-        host: config.host,
-        port: config.port,
-        debug: {
-          request: ['error', 'received', 'handler'],
-          log: ['error']
-        }
-      })
-    } else {
-      server = new Hapi.Server({
-        host: config.host,
-        port: config.port,
-      })
-    }
-
-    //server.register({ register: h2o2, options: { passThrough: true } }, function (err) {})
-    //server.register(require('blipp'), function () {})
-    //server.register(require('hapi-serve-s3'), function () {})
-
-    // Output request headers to aid in osx crash storage issue
-    if (process.env.LOG_HEADERS) {
-      //serv.listener.on('request', (request, event, tags) => {
-      //  logger.log(request.headers)
-      //})
-    }
-
-    server.ext('onPreResponse', (request, h) => {
-      const response = request.response;
-
-      if (Boom.isBoom(response)) {
-        response.header('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
-        response.header('Pragma', 'no-cache');
-        response.header('Expires', 0);
+      // Output request headers to aid in osx crash storage issue
+      if (process.env.LOG_HEADERS) {
+        server = new Hapi.Server({
+          host: config.host,
+          port: config.port,
+          debug: {
+            request: ['error', 'received', 'handler'],
+            log: ['error']
+          }
+        })
+      } else {
+        server = new Hapi.Server({
+          host: config.host,
+          port: config.port,
+        })
       }
 
-      return h.continue;
-    });
+      await server.register({ plugin: require('@hapi/h2o2'), options: { passThrough: true } })
+      await server.register({ plugin: require('blipp') })
+      // TODO(aubrey): was this being used?
+      //await server.register({
+      //  plugin: require('hapi-s3'),
+      //  options: {
+      //    bucket: process.env.S3_DOWNLOAD_BUCKET,
+      //    publicKey: process.env.S3_DOWNLOAD_KEY,
+      //    secretKey: process.env.S3_DOWNLOAD_SECRET,
+      //  }
+      //})
 
-    //serv.listener.once('clientError', function (e) {
-    //  console.error(e)
-    //})
+      // Output request headers to aid in osx crash storage issue
+      if (process.env.LOG_HEADERS) {
+        //serv.listener.on('request', (request, event, tags) => {
+        //  logger.log(request.headers)
+        //})
+      }
 
-    // Routes
-    server.route(
-      [
-        common.root
-      ] //.concat(releaseRoutes, extensionRoutes, crashes, monitoring, androidRoutes, iosRoutes, braveCoreRoutes, promoProxy, installerEventsCollectionRoutes, webcompatRoutes)
-    )
+      server.ext('onPreResponse', (request, h) => {
+        const response = request.response;
 
-    server.start((err) => {
-      assert(!err, `error starting service ${err}`)
-      console.log('update service started')
-    })
+        if (Boom.isBoom(response)) {
+          response.header('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
+          response.header('Pragma', 'no-cache');
+          response.header('Expires', 0);
+        }
+
+        return h.continue;
+      });
+
+      //serv.listener.once('clientError', function (e) {
+      //  console.error(e)
+      //})
+
+      // Routes
+      server.route(
+        [
+          common.root
+        ] //.concat(releaseRoutes, extensionRoutes, crashes, monitoring, androidRoutes, iosRoutes, braveCoreRoutes, promoProxy, installerEventsCollectionRoutes, webcompatRoutes)
+      )
+
+      await server.start((err) => {
+        assert(!err, `error starting service ${err}`)
+        console.log('update service started')
+      })
+    }
+
+    init()
   })
 })
