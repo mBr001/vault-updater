@@ -4,6 +4,7 @@
 
 let Hapi = require('@hapi/hapi')
 let Boom = require('@hapi/boom')
+let Joi = require('@hapi/joi')
 
 process.env.NEW_RELIC_NO_CONFIG_FILE = true
 if (process.env.NEW_RELIC_APP_NAME && process.env.NEW_RELIC_LICENSE_KEY) {
@@ -89,6 +90,8 @@ mq.setup((senders) => {
         })
       }
 
+      server.validator(Joi)
+
       await server.register({ plugin: require('@hapi/h2o2'), options: { passThrough: true } })
       await server.register({ plugin: require('blipp') })
       // TODO(aubrey): was this being used?
@@ -111,7 +114,11 @@ mq.setup((senders) => {
       server.ext('onPreResponse', (request, h) => {
         const response = request.response;
 
-        if (Boom.isBoom(response)) {
+        if (response.isBoom) {
+          response.output.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private, max-age=0'
+          response.output.headers['Pragma'] = 'no-cache'
+          response.output.headers['Expires'] = 0
+        } else {
           response.header('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
           response.header('Pragma', 'no-cache');
           response.header('Expires', 0);
