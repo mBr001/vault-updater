@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 let Hapi = require('@hapi/hapi')
+let Boom = require('@hapi/boom')
 
 process.env.NEW_RELIC_NO_CONFIG_FILE = true
 if (process.env.NEW_RELIC_APP_NAME && process.env.NEW_RELIC_LICENSE_KEY) {
@@ -14,7 +15,6 @@ if (process.env.NEW_RELIC_APP_NAME && process.env.NEW_RELIC_LICENSE_KEY) {
 let logger = require('logfmt')
 let Inert = require('inert')
 let assert = require('assert')
-let setGlobalHeader = require('hapi-set-header')
 let _ = require('underscore')
 let h2o2 = require('h2o2')
 
@@ -100,10 +100,17 @@ mq.setup((senders) => {
       //})
     }
 
-    // Handle the boom response as well as all other requests (cache control for telemetry)
-    //setGlobalHeader(server, 'Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0')
-    //setGlobalHeader(server, 'Pragma', 'no-cache')
-    //setGlobalHeader(server, 'Expires', 0)
+    server.ext('onPreResponse', (request, h) => {
+      const response = request.response;
+
+      if (Boom.isBoom(response)) {
+        response.header('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
+        response.header('Pragma', 'no-cache');
+        response.header('Expires', 0);
+      }
+
+      return h.continue;
+    });
 
     //serv.listener.once('clientError', function (e) {
     //  console.error(e)
