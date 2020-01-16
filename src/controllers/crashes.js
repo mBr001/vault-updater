@@ -1,5 +1,4 @@
 let assert = require('assert')
-let Joi = require('joi')
 let logger = require('logfmt')
 let semver = require('semver')
 let randomstring = require('randomstring')

@@ -5,14 +5,14 @@
 let assert = require('assert')
 let moment = require('moment')
 
-const Joi = require('joi')
+const Joi = require('@hapi/joi')
 const MongoClient = require('mongodb').MongoClient
 const s3 = require('./s3')
 
 const mongoURL = process.env.MLAB_URI
 if (!mongoURL) throw new Error('MLAB_URI must be set in environment')
 
-const usageSchema = Joi.object().keys({
+const usageSchema = Joi.object({
   daily: Joi.boolean(),
   weekly: Joi.boolean(),
   monthly: Joi.boolean(),
@@ -24,7 +24,7 @@ const usageSchema = Joi.object().keys({
   ref: Joi.string(),
   country_code: Joi.string()
 })
-.with('daily', 'weekly', 'monthly')
+.with('daily', ['weekly', 'monthly'])
 
 exports.setup = (amqpSender, amqpBraveCoreSender, done) => {
   MongoClient.connect(mongoURL, (err, connection) => {
@@ -48,7 +48,7 @@ exports.setup = (amqpSender, amqpBraveCoreSender, done) => {
       // insert Laptop usage record
       insertUsage: (usage, done) => {
         if (usage) {
-          const invalid = Joi.validate(usage, usageSchema)
+          const invalid = usageSchema.validate(usage)
           if (invalid.error) {
             done(invalid, null)
           } else {
@@ -77,7 +77,7 @@ exports.setup = (amqpSender, amqpBraveCoreSender, done) => {
       // insert Android usage record
       insertAndroidUsage: (usage, done) => {
         if (usage) {
-          const invalid = Joi.validate(usage, usageSchema)
+          const invalid = usageSchema.validate(usage)
           if (invalid.error) {
             done(invalid, null)
           } else {
@@ -97,7 +97,7 @@ exports.setup = (amqpSender, amqpBraveCoreSender, done) => {
       // insert brave core usage record
       insertBraveCoreUsage: (usage, done) => {
         if (usage) {
-          const invalid = Joi.validate(usage, usageSchema)
+          const invalid = usageSchema.validate(usage)
           if (invalid.error) {
             done(invalid, null)
           } else {
@@ -117,7 +117,7 @@ exports.setup = (amqpSender, amqpBraveCoreSender, done) => {
       // insert iOS usage record
       insertIOSUsage: (usage, done) => {
         if (usage) {
-          const invalid = Joi.validate(usage, usageSchema)
+          const invalid = usageSchema.validate(usage)
           if (invalid.error) {
             done(invalid, null)
           } else {
