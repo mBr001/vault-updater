@@ -37,6 +37,9 @@ exports.setup = (runtime) => {
         }
       })
       return h.response({ ts: (new Date()).getTime(), status: 'ok' })
+    },
+    options: {
+      description: "* Record iOS usage record"
     }
   }
 

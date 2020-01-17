@@ -105,9 +105,9 @@ mq.setup((senders) => {
 
       // Output request headers to aid in osx crash storage issue
       if (process.env.LOG_HEADERS) {
-        //serv.listener.on('request', (request, event, tags) => {
-        //  logger.log(request.headers)
-        //})
+        server.events.on('request', (request, event, tags) => {
+          logger.log(request.headers)
+        })
       }
 
       server.ext('onPreResponse', (request, h) => {
@@ -125,10 +125,6 @@ mq.setup((senders) => {
 
         return h.continue;
       });
-
-      //serv.listener.once('clientError', function (e) {
-      //  console.error(e)
-      //})
 
       // Routes
       server.route(
